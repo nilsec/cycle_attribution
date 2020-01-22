@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
+import torch.nn.functional as F
 
 
 ###############################################################################
@@ -372,6 +373,127 @@ class ResnetGenerator(nn.Module):
         """Standard forward"""
         return self.model(input)
 
+def define_AUX(checkpoint_path, aux_net="Vgg2D", input_nc=1, gpu_ids=[]):
+    """
+    checkpoint_path: Path to train checkpoint to restore weights from
+
+    input_nc: input_channels for aux net
+
+    aux_net: name of aux net
+    """
+    if aux_net == "Vgg2D":
+        net = Vgg2D(input_size=(128, 128),
+                    input_channels=input_nc)
+    else:
+        raise NotImplementedError
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    net.to(device)
+    checkpoint = torch.load(checkpoint_path)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    return net
+
+class Vgg2D(torch.nn.Module):
+    def __init__(
+            self,
+            input_size,
+            input_channels,
+            fmaps=12,
+            downsample_factors=[(2, 2), (2, 2), (2, 2), (2, 2)],
+            output_classes=6):
+
+        self.input_size = input_size
+
+        super(Vgg2D, self).__init__()
+
+        current_fmaps = 1
+        current_size = tuple(input_size)
+
+        features = []
+        for i in range(len(downsample_factors)):
+
+            features += [
+                torch.nn.Conv2d(
+                    current_fmaps,
+                    fmaps,
+                    kernel_size=3,
+                    padding=1),
+                torch.nn.BatchNorm2d(fmaps),
+                torch.nn.ReLU(inplace=True),
+                torch.nn.Conv2d(
+                    fmaps,
+                    fmaps,
+                    kernel_size=3,
+                    padding=1),
+                torch.nn.BatchNorm2d(fmaps),
+                torch.nn.ReLU(inplace=True),
+                torch.nn.MaxPool2d(downsample_factors[i])
+            ]
+
+            current_fmaps = fmaps
+            fmaps *= 2
+
+            size = tuple(
+                int(c/d)
+                for c, d in zip(current_size, downsample_factors[i]))
+            check = (
+                s*d == c
+                for s, d, c in zip(size, downsample_factors[i], current_size))
+            assert all(check), \
+                "Can not downsample %s by chosen downsample factor" % \
+                (current_size,)
+            current_size = size
+
+        self.features = torch.nn.Sequential(*features)
+
+        classifier = [
+            torch.nn.Linear(
+                current_size[0] *
+                current_size[1] *
+                current_fmaps,
+                4096),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(),
+            torch.nn.Linear(
+                4096,
+                4096),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(),
+            torch.nn.Linear(
+                4096,
+                output_classes)
+        ]
+
+        self.classifier = torch.nn.Sequential(*classifier)
+
+        print(self)
+
+    def forward(self, raw):
+        shape = tuple(raw.shape)
+        raw_with_channels = raw.reshape(
+            shape[0],
+            1,
+            shape[2],
+            shape[3])
+
+        assert(shape[2] == shape[3])
+        if shape[2] != self.input_size[0]:
+            #print("WARNING: Shape missmatch, center crop input image from {} to aux net input size {}".format(shape, self.input_size))
+            assert(shape[2]%2 == 0 and self.input_size[0] % 2 == 0)
+            c0 = int(shape[2]/2 - self.input_size[0]/2)
+            c1 = int(shape[2]/2 + self.input_size[0]/2)
+
+            raw_with_channels = raw_with_channels[:,:,c0:c1,c0:c1]
+
+        #print("Normalize Image")
+        raw_with_channels = raw_with_channels/255.0
+        raw_with_channels = raw_with_channels * 2.0 - 1.0
+
+        f = self.features(raw_with_channels)
+        f = f.view(f.size(0), -1)
+        y = self.classifier(f)
+        y = F.softmax(y, dim=1)
+        return y
 
 class ResnetBlock(nn.Module):
     """Define a Resnet block"""
