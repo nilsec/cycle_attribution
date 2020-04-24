@@ -68,13 +68,13 @@ class CycleGANModel(BaseModel):
             opt (Option class)-- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
         # Check consistency of aux model and cycle gan:
-        assert(opt.input_nc == opt.aux_net_input_nc)
+        assert(opt.input_nc == opt.aux_input_nc)
         if opt.preprocess != 'none':
             raise Warning("Preprocessing enabled, this might mess with attributions.")
             assert(opt.aux_input_size == opt.crop_size)
         if not opt.no_flip:
             raise Warning("Flips enabled, this might mess with attributions.")
-        assert(opt.aux_net_input_size in [128,256])
+        assert(opt.aux_input_size in [128,256])
 
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
