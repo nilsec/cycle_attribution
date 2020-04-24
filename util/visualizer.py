@@ -202,7 +202,7 @@ class Visualizer():
             self.create_visdom_connections()
 
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, iters, losses, t_comp, t_data):
+    def print_current_losses(self, epoch, iters, losses, t_comp, t_data, aux_infos=None):
         """print current losses on console; also save the losses to the disk
 
         Parameters:
@@ -215,6 +215,10 @@ class Visualizer():
         message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, iters, t_comp, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
+        if aux_infos is not None:
+            message += "\n AUX: "
+            for k, v in aux_infos.items():
+                message += '{}: {} '.format(k, v)
 
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
