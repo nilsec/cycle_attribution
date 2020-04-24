@@ -44,7 +44,6 @@ class CycleGANModel(BaseModel):
         parser.add_argument('--aux_checkpoint', type=str, help='Checkpoint path for weights of aux network', default=None)
         parser.add_argument('--aux_input_size', type=int, default=256, help='input size of auxiliary model, must be 128 or 256')
         parser.add_argument('--aux_input_nc', type=int, default=1, help='# of input image channels of aux net: 3 for RGB and 1 for grayscale')
-        parser.add_argument('--aux_output_nc', type=int, default=1, help='# of output image channels of aux net: 3 for RGB and 1 for grayscale')
 
         if is_train:
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
@@ -68,6 +67,15 @@ class CycleGANModel(BaseModel):
         Parameters:
             opt (Option class)-- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
+        # Check consistency of aux model and cycle gan:
+        assert(opt.input_nc == opt.aux_net_input_nc)
+        if opt.preprocess != 'none':
+            raise Warning("Preprocessing enabled, this might mess with attributions.")
+            assert(opt.aux_input_size == opt.crop_size)
+        if not opt.no_flip:
+            raise Warning("Flips enabled, this might mess with attributions.")
+        assert(opt.aux_net_input_size in [128,256])
+
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
         self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B', 
@@ -77,6 +85,11 @@ class CycleGANModel(BaseModel):
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         visual_names_A = ['real_A', 'fake_B', 'rec_A', 'res_AB']
         visual_names_B = ['real_B', 'fake_A', 'rec_B', 'res_BA']
+
+        # Check arg consistency:
+
+
+
         if self.isTrain and self.opt.lambda_identity > 0.0:  # if identity loss is used, we also visualize idt_B=G_A(B) ad idt_A=G_A(B)
             visual_names_A.append('idt_B')
             visual_names_B.append('idt_A')
