@@ -117,9 +117,6 @@ class CycleGANModel(BaseModel):
 
             # Init AUX net:
             self.netAUX = networks.define_AUX(opt.aux_checkpoint)
-            # Freeze AUX net:
-            for param in self.netAUX.parameters():
-                param.requires_grad = False
 
         if self.isTrain:
             if opt.lambda_identity > 0.0:  # only works when input and output images have the same number of channels

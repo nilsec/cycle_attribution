@@ -387,6 +387,12 @@ def define_AUX(checkpoint_path, aux_net="Vgg2D", input_nc=1, gpu_ids=[]):
     else:
         raise NotImplementedError
 
+    # Freeze parameters
+    for param in net.parameters():
+        param.requires_grad = False
+    # Disable batch norm and dropout in aux
+    net.eval()
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     net.to(device)
     checkpoint = torch.load(checkpoint_path)
