@@ -373,7 +373,7 @@ class ResnetGenerator(nn.Module):
         """Standard forward"""
         return self.model(input)
 
-def define_AUX(checkpoint_path, aux_net="Vgg2D", input_nc=1, gpu_ids=[]):
+def define_AUX(checkpoint_path, input_size=128, aux_net="vgg2d", input_nc=1, gpu_ids=[]):
     """
     checkpoint_path: Path to train checkpoint to restore weights from
 
@@ -381,8 +381,8 @@ def define_AUX(checkpoint_path, aux_net="Vgg2D", input_nc=1, gpu_ids=[]):
 
     aux_net: name of aux net
     """
-    if aux_net == "Vgg2D":
-        net = Vgg2D(input_size=(128, 128),
+    if aux_net == "vgg2d":
+        net = Vgg2D(input_size=(input_size, input_size),
                     input_channels=input_nc)
     else:
         raise NotImplementedError
