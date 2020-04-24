@@ -468,14 +468,7 @@ class Vgg2D(torch.nn.Module):
 
         print(self)
 
-    def forward(self, raw):
-        shape = tuple(raw.shape)
-        raw_with_channels = raw.reshape(
-            shape[0],
-            1,
-            shape[2],
-            shape[3])
-
+    def crop(self, raw_with_channels, shape):
         assert(shape[2] == shape[3])
         if shape[2] != self.input_size[0]:
             #print("WARNING: Shape missmatch, center crop input image from {} to aux net input size {}".format(shape, self.input_size))
@@ -484,15 +477,27 @@ class Vgg2D(torch.nn.Module):
             c1 = int(shape[2]/2 + self.input_size[0]/2)
 
             raw_with_channels = raw_with_channels[:,:,c0:c1,c0:c1]
+        return raw_with_channels
 
-        #print("Normalize Image")
-        raw_with_channels = raw_with_channels/255.0
-        raw_with_channels = raw_with_channels * 2.0 - 1.0
+    def normalize(raw):
+        # is taken care of already
+        raw = raw/255.0
+        raw = raw * 2.0 - 1.0
+        return raw
+
+    def forward(self, raw):
+        shape = tuple(raw.shape)
+        raw_with_channels = raw.reshape(
+            shape[0],
+            1,
+            shape[2],
+            shape[3])
+
+        raw_with_channels = self.crop(raw_with_channels, shape)
 
         f = self.features(raw_with_channels)
         f = f.view(f.size(0), -1)
         y = self.classifier(f)
-        y = F.softmax(y, dim=1)
         return y
 
 class ResnetBlock(nn.Module):
