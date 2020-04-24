@@ -18,7 +18,7 @@ class CycleGANModel(BaseModel):
     CycleGAN paper: https://arxiv.org/pdf/1703.10593.pdf
     """
     @staticmethod
-    def modify_commandline_options(parser, is_train=True):
+    def modify_commandline_options(parser, is_train=True, is_aux=True):
         """Add new dataset-specific options, and rewrite default values for existing options.
 
         Parameters:
@@ -32,20 +32,26 @@ class CycleGANModel(BaseModel):
         A (source domain), B (target domain).
         Generators: G_A: A -> B; G_B: B -> A.
         Discriminators: D_A: G_A(A) vs. B; D_B: G_B(B) vs. A.
-        Forward cycle loss:  lambda_A * ||G_B(G_A(A)) - A|| (Eqn. (2) in the paper)
-        Backward cycle loss: lambda_B * ||G_A(G_B(B)) - B|| (Eqn. (2) in the paper)
-        Identity loss (optional): lambda_identity * (||G_A(B) - B|| * lambda_B + ||G_B(A) - A|| * lambda_A) (Sec 5.2 "Photo generation from paintings" in the paper)
+        Forward cycle loss:  lambda_A * ||G_B(G_A(A)) - A|| 
+        Backward cycle loss: lambda_B * ||G_A(G_B(B)) - B|| 
+        Identity loss (optional): lambda_identity * (||G_A(B) - B|| * lambda_B + ||G_B(A) - A|| * lambda_A)
+        Aux loss: aux_lambda_A * ||AUX(A) - AUX(Fake_A)|| + aux_lambda_B * ||AUX(B) - AUX(Fake_B)|| 
         Dropout is not used in the original CycleGAN paper.
         """
         parser.set_defaults(no_dropout=True)  # default CycleGAN did not use dropout
+
+        parser.add_argument('--aux_net', type=str, help='Network to use for aux loss', default='Vgg2d')
+        parser.add_argument('--aux_checkpoint', type=str, help='Checkpoint path for weights of aux network', default=None)
+        parser.add_argument('--aux_input_size', type=int, default=256, help='input size of auxiliary model, must be 128 or 256')
+        parser.add_argument('--aux_input_nc', type=int, default=1, help='# of input image channels of aux net: 3 for RGB and 1 for grayscale')
+        parser.add_argument('--aux_output_nc', type=int, default=1, help='# of output image channels of aux net: 3 for RGB and 1 for grayscale')
+
         if is_train:
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
 
             # Auxiliary
-            parser.add_argument('--aux_net', type=str, help='Network to use for aux loss', default='Vgg2d')
-            parser.add_argument('--aux_checkpoint', type=str, help='Checkpoint path for weights of aux network', default=None)
             parser.add_argument('--aux_lambda_A', type=float, default=0.0, help='weight for auxiliary cycle loss (A -> B -> A)')
             parser.add_argument('--aux_lambda_B', type=float, default=0.0, help='weight for auxiliary cycle loss (B -> A -> B)')
             parser.add_argument('--aux_class_A', type=int, default=0, help='class index of class A in the output of aux net')
