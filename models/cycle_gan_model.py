@@ -44,6 +44,8 @@ class CycleGANModel(BaseModel):
         parser.add_argument('--aux_checkpoint', type=str, help='Checkpoint path for weights of aux network', default=None)
         parser.add_argument('--aux_input_size', type=int, default=128, help='input size of auxiliary model, must be 128 or 256')
         parser.add_argument('--aux_input_nc', type=int, default=1, help='# of input image channels of aux net: 3 for RGB and 1 for grayscale')
+        parser.add_argument('--aux_class_A', type=int, default=0, help='class index of class A in the output of aux net')
+        parser.add_argument('--aux_class_B', type=int, default=0, help='class index of class B in the output of aux net')
 
         if is_train:
             parser.add_argument('--lambda_A', type=float, default=10.0, help='weight for cycle loss (A -> B -> A)')
@@ -53,8 +55,6 @@ class CycleGANModel(BaseModel):
             # Auxiliary
             parser.add_argument('--aux_lambda_A', type=float, default=0.0, help='weight for auxiliary cycle loss (A -> B -> A)')
             parser.add_argument('--aux_lambda_B', type=float, default=0.0, help='weight for auxiliary cycle loss (B -> A -> B)')
-            parser.add_argument('--aux_class_A', type=int, default=0, help='class index of class A in the output of aux net')
-            parser.add_argument('--aux_class_B', type=int, default=0, help='class index of class B in the output of aux net')
             parser.add_argument('--aux_lambda_class_A', type=float, default=0.0, help='weight for auxiliary classification loss (aux_net(B_fake)[class_B])')
             parser.add_argument('--aux_lambda_class_B', type=float, default=0.0, help='weight for auxiliary classification loss (aux_net(A_fake)[class_A])')
             parser.add_argument('--aux_no_softmax', action='store_true', help='Apply no softmax before aux loss')
@@ -115,11 +115,11 @@ class CycleGANModel(BaseModel):
             self.netD_B = networks.define_D(opt.input_nc, opt.ndf, opt.netD,
                                             opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
-            # Init AUX net:
-            self.netAUX = networks.define_AUX(checkpoint_path=opt.aux_checkpoint,
-                                              input_size=opt.aux_input_size,
-                                              aux_net=opt.aux_net,
-                                              input_nc=opt.aux_input_nc)
+        # Init AUX net:
+        self.netAUX = networks.define_AUX(checkpoint_path=opt.aux_checkpoint,
+                                          input_size=opt.aux_input_size,
+                                          aux_net=opt.aux_net,
+                                          input_nc=opt.aux_input_nc)
 
         if self.isTrain:
             if opt.lambda_identity > 0.0:  # only works when input and output images have the same number of channels
@@ -155,7 +155,7 @@ class CycleGANModel(BaseModel):
         self.rec_A = self.netG_B(self.fake_B)   # G_B(G_A(A))
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
-        
+       
         # AUX
         self.aux_fake_B = self.netAUX(self.fake_B)
         self.aux_fake_A = self.netAUX(self.fake_A)
