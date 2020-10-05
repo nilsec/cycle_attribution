@@ -1,6 +1,8 @@
 from .base_model import BaseModel
 from . import networks
 
+import torch.nn.functional as F
+
 
 class TestModel(BaseModel):
     """ This TesteModel can be used to generate CycleGAN results for only one direction.
@@ -40,12 +42,19 @@ class TestModel(BaseModel):
         self.loss_names = []
         # specify the images you want to save/display. The training/test scripts  will call <BaseModel.get_current_visuals>
         self.visual_names = ['real', 'fake']
+        self.aux_names = ['aux_real', 'aux_fake']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
         self.model_names = ['G' + opt.model_suffix]  # only generator is needed.
         self.netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG,
                                       opt.norm, not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
 
-        # assigns the model to self.netG_[suffix] so that it can be loaded
+        self.netAUX = networks.define_AUX(checkpoint_path=opt.aux_checkpoint,
+                                          input_size=opt.aux_input_size,
+                                          aux_net=opt.aux_net,
+                                          input_nc=opt.aux_input_nc)
+
+
+         # assigns the model to self.netG_[suffix] so that it can be loaded
         # please see <BaseModel.load_networks>
         setattr(self, 'netG' + opt.model_suffix, self.netG)  # store netG in self.
 
@@ -63,6 +72,8 @@ class TestModel(BaseModel):
     def forward(self):
         """Run forward pass."""
         self.fake = self.netG(self.real)  # G(real)
+        self.aux_real = F.softmax(self.netAUX(self.real), dim=1)
+        self.aux_fake = F.softmax(self.netAUX(self.fake), dim=1)
 
     def optimize_parameters(self):
         """No optimization for test model."""
