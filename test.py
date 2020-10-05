@@ -28,10 +28,12 @@ See frequently asked questions at: https://github.com/junyanz/pytorch-CycleGAN-a
 """
 import os
 from options.test_options import TestOptions
+import json
 from data import create_dataset
 from models import create_model
 from util.visualizer import save_images
 from util import html_util
+import ntpath
 
 
 if __name__ == '__main__':
@@ -63,6 +65,14 @@ if __name__ == '__main__':
         model.test()           # run inference
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
+        aux_infos = model.get_current_aux_infos()
+        aux_infos = dict(aux_infos)
+        aux_infos_json = {v: list(float(k) for k in aux_infos[v][0]) for v in aux_infos.keys()}
+        
+        short_path = ntpath.basename(img_path[0])
+        name = os.path.splitext(short_path)[0]
+        json.dump(aux_infos_json, open(webpage.get_image_dir() + "/{}_aux.json".format(name), "w+"))
+
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
