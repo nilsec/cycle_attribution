@@ -16,6 +16,12 @@ class TestOptions(BaseOptions):
         # Dropout and Batchnorm has different behavioir during training and test.
         parser.add_argument('--eval', action='store_true', help='use eval mode during test time.')
         parser.add_argument('--num_test', type=int, default=50, help='how many test images to run')
+        parser.add_argument('--aux_checkpoint', type=str, help='AUX net checkpoint')
+        parser.add_argument('--aux_input_size', type=int, default=128, help='AUX net input size')
+        parser.add_argument('--aux_net', type=str, default='vgg2d', help='AUX net architecture')
+        parser.add_argument('--aux_input_nc', type=int, default=1, help='AUX net input channels')
+
+
         # rewrite devalue values
         parser.set_defaults(model='test')
         # To avoid cropping, the load_size should be the same as crop_size
