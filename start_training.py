@@ -5,7 +5,6 @@ import os
 def start_training(train_setup,
                    nt_combinations=None,
                    checkpoint="/nrs/funke/ecksteinn/synister_experiments/gan/02_train/setup_t0/model_checkpoint_499000",
-                   aux_lambda_class=0,
                    netG="resnet_9blocks",
                    base_data_dir="/nrs/funke/ecksteinn/synister_experiments/cycle_attribution/data_png",
                    continue_train=False):
@@ -15,8 +14,7 @@ def start_training(train_setup,
     nt_list = ["gaba", "acetylcholine", "glutamate", 
                "serotonin", "octopamine", "dopamine"]
 
-    base_cmd = "~/singularity/run_lsf python -u train.py --aux_checkpoint {} --aux_class_A {} --aux_class_B {}" +\
-               " --aux_lambda_class_A {} --aux_lambda_class_B {}" +\
+    base_cmd = "~/singularity/run_lsf -q gpu_any python -u train.py --aux_checkpoint {} --aux_class_A {} --aux_class_B {}" +\
                " --dataroot {} --name {} --input_nc 1 --output_nc 1 --netG {} --load_size 128 --crop_size 128 --checkpoints_dir /nrs/funke/ecksteinn/synister_experiments/cycle_attribution/checkpoints"
 
     if continue_train:
@@ -54,7 +52,6 @@ def start_training(train_setup,
         json.dump({"checkpoint": checkpoint,
                    "aux_class_A": aux_class_a,
                    "aux_class_B": aux_class_b,
-                   "aux_lambda_class": aux_lambda_class,
                    "dataroot": dataroot,
                    "train_setup": train_setup,
                    "netG": netG},
@@ -63,8 +60,6 @@ def start_training(train_setup,
         cmd = base_cmd.format(checkpoint,
                               aux_class_a,
                               aux_class_b,
-                              aux_lambda_class,
-                              aux_lambda_class,
                               dataroot,
                               train_setup_name,
                               netG
@@ -73,4 +68,4 @@ def start_training(train_setup,
                          shell=True) 
 
 if __name__ == "__main__":
-    start_training(train_setup=2)
+    start_training(train_setup=1111, nt_combinations=[("gaba", "acetylcholine")])

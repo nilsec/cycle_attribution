@@ -52,13 +52,6 @@ class CycleGANModel(BaseModel):
             parser.add_argument('--lambda_B', type=float, default=10.0, help='weight for cycle loss (B -> A -> B)')
             parser.add_argument('--lambda_identity', type=float, default=0.5, help='use identity mapping. Setting lambda_identity other than 0 has an effect of scaling the weight of the identity mapping loss. For example, if the weight of the identity loss should be 10 times smaller than the weight of the reconstruction loss, please set lambda_identity = 0.1')
 
-            # Auxiliary
-            parser.add_argument('--aux_lambda_A', type=float, default=0.0, help='weight for auxiliary cycle loss (A -> B -> A)')
-            parser.add_argument('--aux_lambda_B', type=float, default=0.0, help='weight for auxiliary cycle loss (B -> A -> B)')
-            parser.add_argument('--aux_lambda_class_A', type=float, default=0.0, help='weight for auxiliary classification loss (aux_net(B_fake)[class_B])')
-            parser.add_argument('--aux_lambda_class_B', type=float, default=0.0, help='weight for auxiliary classification loss (aux_net(A_fake)[class_A])')
-            parser.add_argument('--aux_no_softmax', action='store_true', help='Apply no softmax before aux loss')
- 
         return parser
 
     def __init__(self, opt):
@@ -78,8 +71,7 @@ class CycleGANModel(BaseModel):
 
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B', 
-                           'aux_cycle_A', 'aux_cycle_B', 'aux_class_A', 'aux_class_B']
+        self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B']
 
         self.aux_names = ['aux_real_A', 'aux_real_B', 'aux_fake_A', 'aux_fake_B'] # classification results of aux net
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
@@ -206,21 +198,6 @@ class CycleGANModel(BaseModel):
         lambda_A = self.opt.lambda_A
         lambda_B = self.opt.lambda_B
 
-        aux_lambda_A = self.opt.aux_lambda_A
-        aux_lambda_B = self.opt.aux_lambda_B
-        aux_class_A = self.opt.aux_class_A
-        aux_class_B = self.opt.aux_class_B
-        aux_lambda_class_A = self.opt.aux_lambda_class_A
-        aux_lambda_class_B = self.opt.aux_lambda_class_B
-
-        softmax = not self.opt.aux_no_softmax
-        if softmax:
-            f_aux = F.softmax
-        else:
-            def ident(x, dim=1):
-                return x
-            f_aux = ident
-
         # Identity loss
         if lambda_idt > 0:
             # G_A should be identity if real_B is fed: ||G_A(B) - B||
@@ -241,39 +218,8 @@ class CycleGANModel(BaseModel):
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
-        # Forward AUX cycle loss || AUX(G_B(G_A(A))) - AUX(A) ||
-        self.loss_aux_cycle_A = self.criterionCycle(f_aux(self.aux_rec_A, dim=1), f_aux(self.aux_real_A, dim=1)) * aux_lambda_A
-        # Backward AUC cycle loss || AUX(G_A(G_B(B)) - AUX(B)) ||
-        self.loss_aux_cycle_B = self.criterionCycle(f_aux(self.aux_rec_B, dim=1), f_aux(self.aux_real_B, dim=1)) * aux_lambda_B
-        # AUX class loss A:
-        """
-        self.loss_aux_class_A = torch.nn.L1Loss()(self.aux_fake_A.index_select(0, torch.tensor(aux_class_A).to(self.device)),
-                                                  self.aux_real_A.index_select(0, torch.tensor(aux_class_A).to(self.device)))
-        # AUX class loss B:
-        self.loss_aux_class_B = torch.nn.L1Loss()(self.aux_fake_B.index_select(0, torch.tensor(aux_class_B).to(self.device)),
-                                                  self.aux_real_B.index_select(0, torch.tensor(aux_class_B).to(self.device)))
-        """
-
-        """
-        self.loss_aux_class_A = torch.nn.L1Loss()(self.aux_fake_A[0,aux_class_A],
-                                                  self.aux_real_A[0,aux_class_A])
-        # AUX class loss B:
-        self.loss_aux_class_B = torch.nn.L1Loss()(self.aux_fake_B[0,aux_class_B],
-                                                  self.aux_real_B[0,aux_class_B])
-        """
-        self.loss_aux_class_A = torch.nn.L1Loss()(f_aux(self.aux_fake_A, dim=1),
-                                                  f_aux(self.aux_real_A, dim=1)) * aux_lambda_class_A
-        # AUX class loss B:
-        self.loss_aux_class_B = torch.nn.L1Loss()(f_aux(self.aux_fake_B, dim=1),
-                                                  f_aux(self.aux_real_B, dim=1)) * aux_lambda_class_B
-
-        """
-        self.criterionCycle(self.aux_fake_A, self.aux_real_A) * aux_lambda_class_A
-        self.loss_aux_class_B = self.criterionCycle(self.aux_fake_B, self.aux_real_B) * aux_lambda_class_B
-        """
         # combined loss and calculate gradients
-        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B +\
-                      self.loss_aux_cycle_A + self.loss_aux_cycle_B + self.loss_aux_class_A + self.loss_aux_class_B
+        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B + self.loss_idt_A + self.loss_idt_B
 
         self.loss_G.backward()
 
