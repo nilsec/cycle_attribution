@@ -4,7 +4,6 @@ import os
 
 def start_training(train_setup,
                    nt_combinations=None,
-                   checkpoint="/nrs/funke/ecksteinn/synister_experiments/gan/02_train/setup_t0/model_checkpoint_499000",
                    netG="resnet_9blocks",
                    base_data_dir="/nrs/funke/ecksteinn/synister_experiments/cycle_attribution/data_png",
                    continue_train=False):
@@ -49,8 +48,7 @@ def start_training(train_setup,
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
-        json.dump({"checkpoint": checkpoint,
-                   "aux_class_A": aux_class_a,
+        json.dump({"aux_class_A": aux_class_a,
                    "aux_class_B": aux_class_b,
                    "dataroot": dataroot,
                    "train_setup": train_setup,
