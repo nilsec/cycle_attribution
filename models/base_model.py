@@ -145,7 +145,11 @@ class BaseModel(ABC):
         aux_infos = OrderedDict()
         for name in self.aux_names:
             if isinstance(name, str):
-                aux_infos[name] = np.array((getattr(self, name)).cpu().detach().numpy())  # float(...) works for both scalar tensor and float number
+                try:
+                    aux_infos[name] = np.array((getattr(self, name)).cpu().detach().numpy())  # float(...) works for both scalar tensor and float number
+                except AttributeError:
+                    pass
+
         return aux_infos
 
     def save_networks(self, epoch):
@@ -219,6 +223,8 @@ class BaseModel(ABC):
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)
                 num_params = 0
+                if net is None:
+                    continue
                 for param in net.parameters():
                     num_params += param.numel()
                 if verbose:

@@ -14,7 +14,7 @@ def start_training(train_setup,
     nt_list = ["gaba", "acetylcholine", "glutamate", 
                "serotonin", "octopamine", "dopamine"]
 
-    base_cmd = "~/singularity/run_lsf -q gpu_any python -u train.py --aux_checkpoint {} --aux_class_A {} --aux_class_B {}" +\
+    base_cmd = "~/singularity/run_lsf -q gpu_any python -u train.py" +\
                " --dataroot {} --name {} --input_nc 1 --output_nc 1 --netG {} --load_size 128 --crop_size 128 --checkpoints_dir /nrs/funke/ecksteinn/synister_experiments/cycle_attribution/checkpoints"
 
     if continue_train:
@@ -57,10 +57,7 @@ def start_training(train_setup,
                    "netG": netG},
                     open(os.path.join(checkpoint_dir, "train_config.json"), "w+"))
 
-        cmd = base_cmd.format(checkpoint,
-                              aux_class_a,
-                              aux_class_b,
-                              dataroot,
+        cmd = base_cmd.format(dataroot,
                               train_setup_name,
                               netG
                               )
@@ -68,4 +65,4 @@ def start_training(train_setup,
                          shell=True) 
 
 if __name__ == "__main__":
-    start_training(train_setup=1111, nt_combinations=[("gaba", "acetylcholine")])
+    start_training(train_setup=1112, nt_combinations=[("gaba", "acetylcholine")])

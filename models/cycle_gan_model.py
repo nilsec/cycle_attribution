@@ -40,7 +40,7 @@ class CycleGANModel(BaseModel):
         """
         parser.set_defaults(no_dropout=True)  # default CycleGAN did not use dropout
 
-        parser.add_argument('--aux_net', type=str, help='Network to use for aux loss', default='vgg2d')
+        parser.add_argument('--aux_net', type=str, help='Network to use for aux loss', default=None)
         parser.add_argument('--aux_checkpoint', type=str, help='Checkpoint path for weights of aux network', default=None)
         parser.add_argument('--aux_input_size', type=int, default=128, help='input size of auxiliary model, must be 128 or 256')
         parser.add_argument('--aux_input_nc', type=int, default=1, help='# of input image channels of aux net: 3 for RGB and 1 for grayscale')
@@ -108,10 +108,13 @@ class CycleGANModel(BaseModel):
                                             opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
         # Init AUX net:
-        self.netAUX = networks.define_AUX(checkpoint_path=opt.aux_checkpoint,
-                                          input_size=opt.aux_input_size,
-                                          aux_net=opt.aux_net,
-                                          input_nc=opt.aux_input_nc)
+        if opt.aux_net is not None:
+            self.netAUX = networks.define_AUX(checkpoint_path=opt.aux_checkpoint,
+                                              input_size=opt.aux_input_size,
+                                              aux_net=opt.aux_net,
+                                              input_nc=opt.aux_input_nc)
+        else:
+            self.netAUX = None
 
         if self.isTrain:
             if opt.lambda_identity > 0.0:  # only works when input and output images have the same number of channels
@@ -149,12 +152,20 @@ class CycleGANModel(BaseModel):
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
        
         # AUX
-        self.aux_fake_B = self.netAUX(self.fake_B)
-        self.aux_fake_A = self.netAUX(self.fake_A)
-        self.aux_real_A = self.netAUX(self.real_A)
-        self.aux_real_B = self.netAUX(self.real_B)
-        self.aux_rec_A = self.netAUX(self.rec_A)
-        self.aux_rec_B = self.netAUX(self.rec_B)
+        if self.netAUX is not None:
+            self.aux_fake_B = self.netAUX(self.fake_B)
+            self.aux_fake_A = self.netAUX(self.fake_A)
+            self.aux_real_A = self.netAUX(self.real_A)
+            self.aux_real_B = self.netAUX(self.real_B)
+            self.aux_rec_A = self.netAUX(self.rec_A)
+            self.aux_rec_B = self.netAUX(self.rec_B)
+        else:
+            self.aux_fake_B = None
+            self.aux_fake_A = None
+            self.aux_real_A = None
+            self.aux_real_B = None
+            self.aux_rec_A = None
+            self.aux_rec_B = None
 
         # Residuals
         self.res_AB = torch.abs(self.real_A - self.fake_B)
